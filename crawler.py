@@ -6,10 +6,8 @@ from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
 
 
-software_names = [SoftwareName.CHROME.value,
-                 SoftwareName.FIREFOX.value]
-operating_systems = [OperatingSystem.WINDOWS.value,
-                     OperatingSystem.LINUX.value]
+software_names = [SoftwareName.CHROME.value, SoftwareName.FIREFOX.value]
+operating_systems = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value]
 
 user_agent_rotator = UserAgent(
     software_names=software_names, operating_systems=operating_systems, limit=100)
@@ -28,11 +26,11 @@ YELLOW = colorama.Fore.YELLOW
 RED = colorama.Fore.RED
 
 
-url = "http://metapress.htb/"
+url = "http://testphp.vulnweb.com/"
 
 domain_name = urlparse(url).netloc
 
-allLinks = set()
+queue = []
 visited = set()
 external_urls = set()
 
@@ -46,6 +44,8 @@ def is_valid(url):
 def getUrls(url):
     if (is_valid(url)):
         visited.add(url)
+        if len(queue) == len(visited):
+            return
         try:
             body = requests.get(url, headers=headers, timeout=3)
             soup = BeautifulSoup(body.content.decode(), 'html.parser')
@@ -58,15 +58,18 @@ def getUrls(url):
 
                     href = href['href']
                     href = urljoin(url, href)
-                    allLinks.add(href)
+                    if href not in queue:
+                        queue.append(href)
 
             for lhref in link:
                 if 'href' in lhref.attrs:
                     href = urljoin(url, lhref['href'])
-                    allLinks.add(href)
+                    if href not in queue:
+                        queue.append(href)
 
             for l in [link['src'] for link in scripts if 'src' in link.attrs]:
-                allLinks.add(l)
+                if l not in queue:
+                    queue.append(l)
 
         except requests.exceptions.RequestException as err:
             print("[!!] OOps: Something Else", f'{RED}{err} in {url}')
@@ -81,7 +84,7 @@ def getUrls(url):
 getUrls(url)
 
 
-for url in allLinks.copy():
+for url in queue:
     if domain_name not in url:
         # external link
         if url not in external_urls:
@@ -95,12 +98,12 @@ for url in allLinks.copy():
     getUrls(url)
 
 
-for i in allLinks:
+for i in queue:
     print(f"{GREEN} {i}{RESET}")
 
-i = len(allLinks)
+i = len(queue)
 e = len(external_urls)
-a = len(external_urls) + len(visited)
+a = len(external_urls) + len(queue)
 
 print("[+] Total Internal links:", f'{RED}{i}{RESET}')
 print("[+] Total External links:", f'{RED}{e}{RESET}')
