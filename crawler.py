@@ -6,7 +6,8 @@ from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
 
 
-software_names = [SoftwareName.CHROME.value]
+software_names = [SoftwareName.CHROME.value,
+                 SoftwareName.FIREFOX.value]
 operating_systems = [OperatingSystem.WINDOWS.value,
                      OperatingSystem.LINUX.value]
 
@@ -45,30 +46,36 @@ def is_valid(url):
 def getUrls(url):
     if (is_valid(url)):
         visited.add(url)
-        if len(allLinks) == len(visited):
-            return
+        try:
+            body = requests.get(url, headers=headers, timeout=3)
+            soup = BeautifulSoup(body.content.decode(), 'html.parser')
+            a = soup.find_all("a")
+            link = soup.find_all("link")
+            scripts = soup.find_all("script")
 
-        body = requests.get(url, headers=headers)
-        soup = BeautifulSoup(body.content.decode(), 'html.parser')
+            for href in a:
+                if 'href' in href.attrs:
 
-        a = soup.find_all("a")
-        link = soup.find_all("link")
-        scripts = soup.find_all("script")
+                    href = href['href']
+                    href = urljoin(url, href)
+                    allLinks.add(href)
 
-        for href in a:
-            if 'href' in href.attrs:
+            for lhref in link:
+                if 'href' in lhref.attrs:
+                    href = urljoin(url, lhref['href'])
+                    allLinks.add(href)
 
-                href = href['href']
-                href = urljoin(url, href)
-                allLinks.add(href)
+            for l in [link['src'] for link in scripts if 'src' in link.attrs]:
+                allLinks.add(l)
 
-        for lhref in link:
-            if 'href' in lhref.attrs:
-                href = urljoin(url, lhref['href'])
-                allLinks.add(href)
-
-        for l in [link['src'] for link in scripts if 'src' in link.attrs]:
-            allLinks.add(l)
+        except requests.exceptions.RequestException as err:
+            print("[!!] OOps: Something Else", f'{RED}{err} in {url}')
+        except requests.exceptions.HTTPError as errh:
+            print("{RED}{RESET}[!!] Http Error:", f'{RED}{errh} in {url}')
+        except requests.exceptions.ConnectionError as errc:
+            print("{RED}{RESET}[!!] Error Connecting:",f'{RED}{errc} in {url}')
+        except requests.exceptions.Timeout as errt:
+            print("{RED}{RESET}[!!] Timeout Error: ", f'{RED}{errt} in {url}')
 
 
 getUrls(url)
@@ -82,7 +89,8 @@ for url in allLinks.copy():
             print(f"{GRAY}[!] External link: {url}{RESET}")
             continue
     print(f"{YELLOW}[*] Crawling: {url}{RESET}")
-    if ".png" in url:
+    if ".png" in url or ".jpg" in url or "jpeg" in url or ".ico" in url:
+        visited.add(url)
         continue
     getUrls(url)
 
