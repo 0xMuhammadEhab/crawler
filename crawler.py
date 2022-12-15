@@ -92,7 +92,7 @@ for url in queue:
             print(f"{GRAY}[!] External link: {url}{RESET}")
             continue
     print(f"{YELLOW}[*] Crawling: {url}{RESET}")
-    if ".png" in url or ".jpg" in url or "jpeg" in url or ".ico" in url:
+    if ".png" in url or ".jpg" in url or "jpeg" in url or ".ico" or woff2 or woff in url:
         visited.add(url)
         continue
     getUrls(url)
